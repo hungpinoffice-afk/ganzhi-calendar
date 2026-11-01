@@ -106,6 +106,7 @@
     padding:2px 9px;border-radius:6px;font-weight:600;
   }
   .subLine .sep{color:#4a515c}
+  .subLine .muted{color:#6d737d;font-size:13px}
   .tiny{margin-top:9px;font-size:11.5px;color:#6d737d;letter-spacing:.03em}
 
   .heroR{flex-shrink:0}
@@ -286,7 +287,7 @@
   </div>
 
   <div class="bar" id="panelSolar">
-    <div class="fg"><span class="lab">年</span><input type="number" id="yIn" class="num y4" min="1901" max="2100"></div>
+    <div class="fg"><span class="lab">年</span><input type="number" id="yIn" class="num y4" min="1600" max="2200"></div>
     <div class="fg"><span class="lab">月</span><select id="moIn" class="msel"></select></div>
     <div class="fg"><span class="lab">日</span><select id="dIn" class="msel"></select></div>
     <div class="fg"><span class="lab">時</span><select id="hIn"></select></div>
@@ -303,7 +304,7 @@
     <div class="fg p2"><span class="lab">月</span><select id="gMg" class="gzsel g1"></select><select id="gMz" class="gzsel g1"></select></div>
     <div class="fg p2"><span class="lab">日</span><select id="gDg" class="gzsel g1"></select><select id="gDz" class="gzsel g1"></select></div>
     <div class="fg p2"><span class="lab">時</span><select id="gHz" class="gzsel g1 hh"></select></div>
-    <div class="fg"><span class="lab">範圍</span><input type="number" id="gY1" min="1901" max="2100"><span class="lab">–</span><input type="number" id="gY2" min="1901" max="2100"></div>
+    <div class="fg"><span class="lab">範圍</span><input type="number" id="gY1" min="1600" max="2200"><span class="lab">–</span><input type="number" id="gY2" min="1600" max="2200"></div>
     <div class="bgrp"><button id="btnCalc">推算</button><button class="ghost" id="btnNow2">現在時間</button></div>
   </div>
 
@@ -332,7 +333,7 @@
     <b>干支輸入</b>：年、月、日各拆成「干」「支」兩個下拉，時只有「支」（時干由日的天干以五鼠遁自動推出）；干與支陰陽會自動對齊，在指定年份範圍內反推西曆時刻；若只有單一解會自動套用，多解可點選切換。<br>
     干支年、月以太陽視黃經分界（立春＝315°、驚蟄＝345°，月首為十二節令）；日柱以西曆日對應儒略日推算；時柱以五鼠遁推得。
     <b>無解</b>：若四柱互相矛盾（例如「戊」年的「戌」月不可能出現「戊戌」，應為「壬戌」），卡片會轉為紅色無解狀態，直接顯示你所選的四柱並標出哪一柱出錯。
-    節氣時刻由牛頓法求解，精度約 ±15 分鐘，僅在交節當日前後數小時可能影響月柱判定。農曆為 1900–2100 月相資料表，與通行萬年曆一致。
+    節氣時刻由牛頓法求解，1600–2200 範圍內誤差約 ±30 分鐘，僅在交節當日前後數小時可能影響月柱判定。年份可查 1600–2200；農曆為 1900–2100 月相資料表，超出此範圍只顯示干支四柱，農曆以「—」表示。
   </footer>
 </div>
 
@@ -432,6 +433,8 @@ function lYearDays(y){
   return s+leapDays(y);
 }
 function solarToLunar(y,m,d){
+  // 資料表只涵蓋 1900-02-19 ~ 2100-12-31，超出範圍不推算
+  if(y<1900||y>2100||(y===1900&&(m===1||(m===2&&d<19)))) return null;
   let offset=Math.round((Date.UTC(y,m-1,d)-Date.UTC(1900,0,31))/86400000);
   let i,temp=0;
   for(i=1900;i<2101&&offset>0;i++){temp=lYearDays(i);offset-=temp;}
@@ -605,7 +608,7 @@ function curDate(){
   let h=raw[3]===''?0:Number(raw[3]);
   let mi=raw[4]===''?0:Number(raw[4]);
   if(!Number.isFinite(y))y=nowP.getFullYear();
-  y=clamp(Math.round(y),1901,2100);
+  y=clamp(Math.round(y),1600,2200);
   mo=clamp(Math.round(mo)||1,1,12);
   d=clamp(Math.round(d)||1,1,daysIn(y,mo));
   h=clamp(Math.round(h)||0,0,23);
@@ -633,7 +636,7 @@ function fillDays(y,mo,keep){
 }
 function syncDays(){
   const ny=new Date().getFullYear();
-  const y=clamp(Math.round(Number($('yIn').value))||ny,1901,2100);
+  const y=clamp(Math.round(Number($('yIn').value))||ny,1600,2200);
   const mo=Number($('moIn').value)||1;
   fillDays(y,mo,Number($('dIn').value));
   render();
@@ -653,12 +656,12 @@ function render(){
   $('bigDate').innerHTML =
     `${y}<i>年</i>${mo}<i>月</i>${d}<i>日</i><span class="wk">週${wd}</span>`;
 
-  const lm = (lunar.leap?'閏':'')+LMON[lunar.m-1]+'月'+LDAY[lunar.d-1];
+  const lm = lunar ? ((lunar.leap?'閏':'')+LMON[lunar.m-1]+'月'+LDAY[lunar.d-1]) : '';
   $('subLine').innerHTML =
     `<span class="tag">${gzStr(r.yIdx)}</span>
      <span>肖${SX[r.yIdx%12]}</span>
      <span class="sep">·</span>
-     <span>農曆${lm}</span>`;
+     <span${lunar?'':' class="muted"'}>${lunar?'農曆'+lm:'農曆僅支援 1900–2100'}</span>`;
 
   const after = Math.floor(r.jdL-(r.curJD+8/24));
   $('tinyLine').textContent =
@@ -692,7 +695,7 @@ function render(){
   const lcT=fromJD(r.lc+8/24);
 
   $('meta').innerHTML=`
-    <div class="mi"><div class="k">農曆</div><div class="v">${lm}<small>${gzStr(r.yIdx)}年</small></div></div>
+    <div class="mi"><div class="k">農曆</div><div class="v">${lunar?lm:'—'}<small>${lunar?gzStr(r.yIdx)+'年':'超出 1900–2100'}</small></div></div>
     <div class="mi"><div class="k">節氣</div><div class="v">${TERMS[r.tIdx]}<small>${fmtTime(r.curJD)}</small></div></div>
     <div class="mi"><div class="k">下一節氣</div><div class="v">${TERMS[(r.tIdx+1)%24]}<small>${fmtTime(r.nxtJD)}</small></div></div>
     <div class="mi"><div class="k">立春</div><div class="v">${lcT.y}-${pad(lcT.m)}-${pad(lcT.d)}<small>${pad(lcT.h)}:${pad(lcT.mi)}</small></div></div>
@@ -788,7 +791,7 @@ function runGz(){
   let y1=Number($('gY1').value), y2=Number($('gY2').value);
   if(!y1||!y2){ const n=new Date().getFullYear(); y1=n-30; y2=n+30; }
   if(y1>y2){ const t=y1; y1=y2; y2=t; }
-  y1=Math.max(1901,y1); y2=Math.min(2100,y2);
+  y1=Math.max(1600,y1); y2=Math.min(2200,y2);
 
   // 陽干配陽支、陰干配陰支
   const bad=[];
@@ -889,8 +892,8 @@ function shiftDay(k){
   fillMonths();
 
   const n=new Date();
-  $('gY1').value=n.getFullYear()-30;
-  $('gY2').value=n.getFullYear()+30;
+  $('gY1').value=1600;
+  $('gY2').value=2200;
 
   setNow();
 
